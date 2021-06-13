@@ -41,7 +41,7 @@ public class RpcServer {
                 threadPoolExecutor.execute(new WorkThread(client, service));
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.error("调用时发生错误：", e);
         }
     }
 
