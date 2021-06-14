@@ -26,3 +26,13 @@
 3. 然后服务器端指定端口开启服务；当服务器端接收到一个socket，就把它放到RequestHandlerThread线程池
 4. RequestHandlerThread(socket, handler, register)
 5. RequestHandler.handler(rpcRequest, service)
+
+### 版本v2.0
+1. 用Netty进行客户端和服务器端通信
+2. 把RpcServer、RpcClient抽象成接口，原来的就是socket实现：SocketServer, RpcClient；现在加入Netty实现
+3. 对RpcClientProxy进行抽象，原来的RpcClientProxy默认用的是socketClient，现在也把不同的client传入RpcClientProxy的构造函数，为不同的client实现代理。
+4. 之前用的是原生序列化，这里实现通用序列化接口，可以实现不同的序列化
+5. 把DefaultServiceRegister类中两个存储注册服务的属性改成static类型，这样就可以让注册表全局只有一份；也就不用让RpcServer与某一个具体的serviceRegister对象进行绑定
+
+
+
