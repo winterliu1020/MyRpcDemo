@@ -11,8 +11,8 @@ import lombok.Getter;
 public enum ResponseCode {
     SUCCESS(200, "成功调用"),
     FIELD(404, "失败调用"),
-    NOTFOUNDMETHOD(500, "没找到API对应的方法"),
-    NOTFOUNDCLASS(500, "没找到API所在类");
+    NOT_FOUND_METHOD(500, "没找到API对应的方法"),
+    NOT_FOUND_CLASS(500, "没找到API所在类");
     private final Integer code;
     private final String message;
 }

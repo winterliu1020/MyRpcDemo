@@ -1,6 +1,8 @@
 package me.liuwentao.rpc.server;
 
 import me.liuwentao.rpc.api.HelloService;
+import me.liuwentao.rpc.core.Register.DefaultServiceRegister;
+import me.liuwentao.rpc.core.Register.ServiceRegister;
 import me.liuwentao.rpc.core.Server.RpcServer;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
@@ -11,10 +13,12 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  */
 public class TestServer {
     public static void main(String[] args) {
-        RpcServer rpcServer = new RpcServer();
+        ServiceRegister serviceRegister = new DefaultServiceRegister();
         // 测试一下服务端的注册功能
         HelloService helloService = new HelloServiceImpl();
-        // 相当于服务器端注册了一个服务，只要监听到了来自于8083的rpcRequest请求就用helloService去执行
-        rpcServer.register(helloService, 8083);
+        serviceRegister.register(helloService);
+        // 给RpcServer绑定一个注册表
+        RpcServer rpcServer = new RpcServer(serviceRegister);
+        rpcServer.start(8083); // 开启服务
     }
 }
