@@ -3,7 +3,7 @@
 
 本项目参考来源：[参考项目](https://github.com/CN-GuoZiyang/My-RPC-Framework)  
 
-### 版本V1.0
+### 版本v1.0
 思路：
 1. 用socket进行进行通信
 2. 采用jdk原生序列化
@@ -19,3 +19,10 @@
 - rpc-server: 模拟服务器端，也就是在某个端口注册一个服务而已
 
 关于代理模式的一些介绍：[代理模式](https://winterliu1020.github.io/winterliu-notes/1-Java%20%E5%9F%BA%E7%A1%80/Java%E4%B8%AD%E7%9A%84%E4%BB%A3%E7%90%86%E7%B1%BBProxy%E5%92%8CInvocationHandler.html)
+
+### 版本v1.1
+1. 框架中增加ServiceRegister模块
+2. 首先测试服务器端需要将服务添加到register注册表，然后服务端绑定这个register对象
+3. 然后服务器端指定端口开启服务；当服务器端接收到一个socket，就把它放到RequestHandlerThread线程池
+4. RequestHandlerThread(socket, handler, register)
+5. RequestHandler.handler(rpcRequest, service)
