@@ -1,5 +1,6 @@
 package me.liuwentao.rpc.common.Entity;
 
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 
@@ -10,7 +11,9 @@ import java.io.Serializable;
  */
 @Data
 @Builder
-public class RpcRequest implements Serializable {
+@AllArgsConstructor
+public class RpcRequest implements Serializable { // 用jdk原生的序列化就需要实现Serializable接口；用Jackson来序列化就可以不用实现接口
+    public RpcRequest(){}
     // 一个rpc请求需要有：接口名字、方法名字、方法中的参数、方法中参数的类型
     private String interfaceName;
     private String methodName;

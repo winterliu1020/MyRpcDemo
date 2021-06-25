@@ -1,7 +1,10 @@
-package me.liuwentao.rpc.core.Client;
+package me.liuwentao.rpc.core;
 
 import me.liuwentao.rpc.common.Entity.RpcRequest;
 import me.liuwentao.rpc.common.Entity.RpcResponse;
+import me.liuwentao.rpc.core.Socket.client.SocketClient;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
@@ -14,12 +17,12 @@ import java.lang.reflect.Proxy;
  * 客户端并没有API接口的实现类，那客户端怎么去调用API接口对应的实现方法呢？
  */
 public class RpcClientProxy implements InvocationHandler {
-    private String host;
-    private Integer port;
+    private static final Logger logger = LoggerFactory.getLogger(RpcClientProxy.class);
+    private RpcClient rpcClient;
 
-    public RpcClientProxy(String host, Integer port) {
-        this.host = host;
-        this.port = port;
+    // 版本2.0中将RpcClientProxy类进行抽象，它可以为不同的client实现类进行代理；所以构造方法中你需要传一个client对象，从此由client去与host, port进行绑定；
+    public RpcClientProxy(RpcClient rpcClient) {
+        this.rpcClient = rpcClient;
     }
 
     @SuppressWarnings("unchecked")
@@ -31,12 +34,12 @@ public class RpcClientProxy implements InvocationHandler {
     // 这样你只需要在客户端传服务接口的class对象，Proxy.newProxyInstance()会帮你生成一个实现这个接口的子类，而这个子类调用接口中的方法又会通过发送rpcRequest去调用在服务器上的真正的实例方法
     @Override
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+        logger.info("调用方法：{}#{}", method.getDeclaringClass().getName(), method.getName());
         RpcRequest rpcRequest = RpcRequest.builder().interfaceName(method.getDeclaringClass().getName())
                 .methodName(method.getName())
                 .parameters(args)
                 .paramTypes(method.getParameterTypes())
                 .build();
-        RpcClient rpcClient = new RpcClient();
-        return ((RpcResponse)rpcClient.sendRequest(rpcRequest, host, port)).getData();
+        return ((RpcResponse) rpcClient.sendRequest(rpcRequest)).getData();
     }
 }

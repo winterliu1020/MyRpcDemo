@@ -15,8 +15,9 @@ import java.util.concurrent.ConcurrentHashMap;
 public class DefaultServiceRegister implements ServiceRegister{
     // 将这个接口的完整类名作为服务名；
     // 向 接口 注册 服务；也就是调用这个接口上所有的方法都是通过这个service去执行
-    private final ConcurrentHashMap<String, Object> serviceMap = new ConcurrentHashMap<>(); // 接口名，service；因为同一个service可能实现了很多接口
-    private final Set<String> registerService = ConcurrentHashMap.newKeySet(); // 放所有服务实现类的名字
+    // 说明：v2.0版本中将这两个属性变成static，也就是说全局只有一份注册表，这样RpcServer类也不用和ServiceRegister对象进行绑定了
+    private static final ConcurrentHashMap<String, Object> serviceMap = new ConcurrentHashMap<>(); // 接口名，service；因为同一个service可能实现了很多接口
+    private static final Set<String> registerService = ConcurrentHashMap.newKeySet(); // 放所有服务实现类的名字
 
     Logger logger = LoggerFactory.getLogger(ServiceRegister.class);
 
