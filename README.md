@@ -31,8 +31,20 @@
 1. 用Netty进行客户端和服务器端通信
 2. 把RpcServer、RpcClient抽象成接口，原来的就是socket实现：SocketServer, RpcClient；现在加入Netty实现
 3. 对RpcClientProxy进行抽象，原来的RpcClientProxy默认用的是socketClient，现在也把不同的client传入RpcClientProxy的构造函数，为不同的client实现代理。
-4. 之前用的是原生序列化，这里实现通用序列化接口，可以实现不同的序列化
+4. 之前用的是原生序列化，这里实现通用序列化接口，可以实现不同的序列化，首次加入JSON序列化，但是注意反序列化的时候rpcRequest中Object类型数组会反序列化失败，原因在于JSON序列化只是简单保存字符串，会丢失类型信息，所以用JSON序列化的时候需要利用rpcRequest中参数类型数组辅助反序列化。
 5. 把DefaultServiceRegister类中两个存储注册服务的属性改成static类型，这样就可以让注册表全局只有一份；也就不用让RpcServer与某一个具体的serviceRegister对象进行绑定
+
+这一版本中主要加入netty进行底层通信，一些知识点：
+1. AttributeMap<AttributeKey, Attribute>，每一个channelHandlerContext以及channel都各自绑定了自己的一个AttributeMap，各个channelHandlerContext不能访问到其它channelHandlerContext的AttributeMap，但是所有的channelHandlerContext都能访问到所在channel的AttributeMap。
+
+
+
+
+
+
+
+
+
 
 
 
