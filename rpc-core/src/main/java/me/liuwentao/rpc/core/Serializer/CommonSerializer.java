@@ -18,6 +18,8 @@ public interface CommonSerializer {
     // 通过标识code拿到某个序列化实现类
     static CommonSerializer getByCode(int code) {
         switch (code){
+            case 0:
+                return new KryoSerializer();
             case 1:
                 return new JsonSerializer();
             default:

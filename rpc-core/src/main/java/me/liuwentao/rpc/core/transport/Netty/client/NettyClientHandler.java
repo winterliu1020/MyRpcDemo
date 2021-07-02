@@ -1,4 +1,4 @@
-package me.liuwentao.rpc.core.Netty.client;
+package me.liuwentao.rpc.core.transport.Netty.client;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -11,8 +11,10 @@ import org.slf4j.LoggerFactory;
 /**
  * Created by liuwentao on 2021/6/16 14:40
  */
-public class NettyClientHandler extends SimpleChannelInboundHandler<RpcResponse> {
+public class NettyClientHandler extends SimpleChannelInboundHandler<RpcResponse<?>> {
     Logger logger = LoggerFactory.getLogger(NettyClientHandler.class);
+
+    // 这里就可以直接拿到在Decode中以及解码并且反序列化，然后加入到list中的RpcResponse对象
     @Override
     protected void channelRead0(ChannelHandlerContext channelHandlerContext, RpcResponse rpcResponse) throws Exception {
         try {
@@ -20,7 +22,8 @@ public class NettyClientHandler extends SimpleChannelInboundHandler<RpcResponse>
             logger.info("客户端接收到响应信息：{}", rpcResponse);
 
             // 构造一个key值为rpcResponse的attr
-            AttributeKey<RpcResponse> rpcResponseAttributeKey = AttributeKey.valueOf("rpcResponse");
+            AttributeKey<RpcResponse<?>> rpcResponseAttributeKey =
+                    AttributeKey.valueOf("rpcResponse" + rpcResponse.getRequestId());
             // 这个是绑定在channel上，所以在nettyClient上也是通过channel.attr去get
             channelHandlerContext.channel().attr(rpcResponseAttributeKey).set(rpcResponse); // 为某个AttributeKey设置具体的value值
             channelHandlerContext.channel().close();

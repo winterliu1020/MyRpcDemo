@@ -1,10 +1,9 @@
 package me.liuwentao.rpc.server;
 
 import me.liuwentao.rpc.api.HelloService;
-import me.liuwentao.rpc.core.Register.DefaultServiceRegister;
-import me.liuwentao.rpc.core.Register.ServiceRegister;
 import me.liuwentao.rpc.core.RpcServer;
-import me.liuwentao.rpc.core.Socket.server.SocketServer;
+import me.liuwentao.rpc.core.Serializer.KryoSerializer;
+import me.liuwentao.rpc.core.transport.Socket.server.SocketServer;
 
 /**
  * Created by liuwentao on 2021/6/13 12:03
@@ -13,13 +12,11 @@ import me.liuwentao.rpc.core.Socket.server.SocketServer;
  */
 public class TestSocketServer {
     public static void main(String[] args) {
-        ServiceRegister serviceRegister = new DefaultServiceRegister();
-        // 测试一下服务端的注册功能
+        RpcServer socketServer = new SocketServer("127.0.0.1", 8086);
+        socketServer.setSerializer(new KryoSerializer());
+        // socketServer发布一个服务
         HelloService helloService = new HelloServiceImpl();
-        serviceRegister.register(helloService);
-        // 给RpcServer绑定一个注册表
-        RpcServer socketServer = new SocketServer(serviceRegister);
-//        RpcServer nettyServer = new NettyServer(serviceRegister);
-        socketServer.start(8083); // 开启服务
+        socketServer.publishService(helloService, HelloService.class); // 服务具体实现类、接口class
+        socketServer.start();
     }
 }

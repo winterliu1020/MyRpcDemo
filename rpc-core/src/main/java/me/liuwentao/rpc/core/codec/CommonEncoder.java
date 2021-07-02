@@ -23,6 +23,7 @@ public class CommonEncoder extends MessageToByteEncoder {
         this.serializer = serializer;
     }
 
+    // 在MessageToByteEncoder类中，o是你要发送的对象 这里其实就是你用channel.writeAndFlush(rpcRequest)写过来的rpcRequest对象，然后你需要把你要发送的对象的字节流通过byteBuf写出去
     @Override
     protected void encode(ChannelHandlerContext channelHandlerContext, Object o, ByteBuf byteBuf) throws Exception {
         // encode其实就是将：魔数、包类型、序列化类型、数据长度、数据字节流依次以流的形式往后面写
@@ -32,7 +33,7 @@ public class CommonEncoder extends MessageToByteEncoder {
         } else {
             byteBuf.writeInt((PackageType.RESPONSE_PACKAGE.getCode()));
         }
-        byteBuf.writeInt(SerializerCode.JSON.getCode());
+        byteBuf.writeInt(serializer.getCode());
         byte[] bytes = serializer.serializer(o);
         byteBuf.writeInt(bytes.length);
         byteBuf.writeBytes(bytes);
