@@ -37,14 +37,35 @@
 这一版本中主要加入netty进行底层通信，一些知识点：
 1. AttributeMap<AttributeKey, Attribute>，每一个channelHandlerContext以及channel都各自绑定了自己的一个AttributeMap，各个channelHandlerContext不能访问到其它channelHandlerContext的AttributeMap，但是所有的channelHandlerContext都能访问到所在channel的AttributeMap。
 
+### 版本v3.0
+版本简介：这个版本中引入了注册中心，这里使用Nacos，同时增加了Kryo序列化方式。  
 
+目录介绍：  
 
+rpc-common模块：
+- Entity 
+- Enumeration  
+- Exception
+- uitl
 
+rpc-core模块：
+- codec 用于netty中编解码
+- handler 所有通信方式公用的类，调用handler(rpcRequest)来反射执行，并返回结果
+- registry 远程注册中心
+- provider 本地注册表
+- serializer 序列化方式
+- transport 通信方式。
 
+#### 关于为什么要引入远程注册中心Nacos?
+在版本2中都是将服务实现类直接放到ServiceProvider对象中，ServiceProvider是放在服务器端的，相当于服务器端本地注册表，ServiceProvider中两个属性：  
+``` java
+private static final ConcurrentHashMap<String, Object> serviceMap = new ConcurrentHashMap<>(); // 接口名，service；因为同一个service可能实现了很多接口（多个接口可能注册到同一个服务实现类上）
+private static final Set<String> registerService = ConcurrentHashMap.newKeySet(); // 放所有服务实现类的名字；一个线程安全的set；只是起到一个防止重复添加同一个服务实现类
+```
+通过这个ServiceProvider类我做到了将**接口注册到服务**上，这样我之后就可以通过接口名获取到具体的服务实现类，但是这就让我们局限在一个客户端只能请求一个服务器端上的服务，如果这个服务器端上这个请求的服务挂了，那么客户端就无法获取远程过程调用的结果；  
 
+所以引入注册中心的概念，服务器端如果要发布服务，都需要将（key:接口名，value:接口对应的这项服务发布的host,port）注册到远程注册中心，然后客户端则通过接口名这个key去获取服务所在的host, port；那这样我就可以提供同一个服务的多个(host, port)注册到远程注册中心，那客户端通过接口名去获取服务所在的地址时，在注册中心还可以设置**负载均衡**策略，返回对应该key的所有服务地址中负载最低的那一个。  
 
+注意点：远程注册中心只存储了<**接口名**， inetSocketAddress>; 具体的服务实现实例还是存在服务器端上的ServiceProvider对象中serviceMap属性。  
 
-
-
-
-
+以上就是为什么要引入远程注册中心。
