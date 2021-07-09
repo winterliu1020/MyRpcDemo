@@ -69,3 +69,19 @@ private static final Set<String> registerService = ConcurrentHashMap.newKeySet()
 注意点：远程注册中心只存储了<**接口名**， inetSocketAddress>; 具体的服务实现实例还是存在服务器端上的ServiceProvider对象中serviceMap属性。  
 
 以上就是为什么要引入远程注册中心。
+
+### 版本v3.1
+版本介绍：新增服务自动注销、负载均衡、增加心跳机制三个功能；优化了各个部分的代码
+#### 远程注册中心中的服务自动注销
+在之前的版本中，服务器端将服务注册到远程注册中心后，如果服务器端挂了，注册记录还会留在注册中心，如果客户端此时从注册中心获取服务地址并请求，是没有用的。所以我们需要当服务器端挂了前一刻，将注册中心中注册的对应服务注销掉，这里使用hook，也就是一个钩子，在服务器端挂了之前，会执行注销函数。
+#### 负载均衡
+其实就是客户端指定负载均衡方式，当客户端从注册中心获取到一批提供请求服务的服务端地址，通过负载方式选出一个服务端地址，让客户端去连接。这里有随机和轮询两种。
+#### 增加心跳机制
+其实就是在netty的客户端和服务器端都加入IdleStateHandler，然后指定对应的读/写空闲时间会触发读/写空闲时间，然后你在handler中增加userEventTriggered()方法来捕获到读/写空闲事件，并且发送心跳RpcRequest（其实就是在RpcRequest中加了一个Boolean类型的字段标记当前rpcRequest是否是心跳包），服务器端接收到心跳包不会做出响应（netty的心跳机制是单向的，避免当大量客户端连接同一个服务器端，该服务器端要给每一个客户端发来的心跳包发出回应，占据网络资源）。
+#### 优化代码
+1. 使用ThreadPoolFactory创建线程池，并且用一个ConcurrentHashMap<String, ExecutorService>来管理线程池，key是线程池中线程工厂的前缀名。当服务器端关闭时，会将这个hashmap管理的所有线程池关闭。
+2. 在RpcRequest对象中加上requestId属性，每一个RpcResponse也有一个requestId属性与之对应；当发起一个RpcRequest得到一个RpcResponse时，会执行check()函数对这二者进行匹配检查。
+3. Netty客户端增加失败重连机制（对应ChannelProvider这个类），而且可以用Socket客户端和Netty服务器端进行通信（因为底层都是字节流，这里需要注意在Socket客户端不要用ObjectInputStream去包装socket.getInputStream()，而是直接用socket的InputStream这个流来读取字节，这里涉及到ObjectInputStream在构造对象时需要检查stream head的问题，首先你这个socket.getInputStream()得有流过来，而且还必须是object类型的字节流，比如我这里开头是写的自定义协议包的魔数，所以是无法构造一个ObjectInputStream对象的！！！）
+4. 之前是将serviceRegistry()和lookupService()放到同一个接口中，这里抽象出ServiceDiscovery接口，将服务在远程注册中心的注册与发现放到两个接口中，并且把管理远程注册中心的各个方法放到NacosUtil类中，这样「注册」与「发现」两个接口的实现类都可以直接使用NacosUtil来操作远程注册中心。相应的，服务批量注销方法也在NacosUtil类中。
+5. 优化序列化器创建方式，之前客户端和服务器端都用setSerializer()来指定序列化方式，这里通过优化客户端和服务器端的构造方法，如果不指定序列化方式，框架就帮你自动选择默认的序列化方式，你也可以在new客户端或者服务器端的时候，传入序列化器对应的编码告诉框架需要帮你生成哪一种序列化器。
+6. **在客户端**，通过CompletableFuture<RpcResponse>来接收Netty客户端的响应结果，新建了一个UnprocessedRequest类，然后这个类中有一个concurrentHashMap<String, CompletableFuture<RpcResponse>>，其中key就是requestId，value就是这个request对应的响应结果，而这个UnprocessedRequest类是一个单例（**这里我觉得是一个Bug**），通过这种方式来管理每一个RpcRequest和与之对应的CompletableFuture<RpcResponse>。具体管理流程：1.当客户端发起一个request时就将该<key, value>放到map中：unprocessedRequests.put(rpcRequest.getRequestId(), resultFuture); 2.如果客户端sendRequest中发生异常，那么需要将该request移出map:unprocessedRequests.remove(rpcRequest.getRequestId()); 3.如果客户端成功接收到服务器端的响应，需要执行unprocessedRequests.complete(rpcResponse);来告诉客户端该request的响应完成，所以netty对应的sendRequest的返回值是completableFuture<RpcResponse>对象，该completableFuture对象已经执行了complete()，这样在RpcClientProxy中就可以通过completableFuture.get()拿到对应的response，如果没有执行complete，执行get的时候会阻塞。
