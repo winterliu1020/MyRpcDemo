@@ -21,4 +21,7 @@ public class RpcRequest implements Serializable { // 用jdk原生的序列化就
     private String methodName;
     private Object[] parameters; // 方法中传的对象实体
     private Class<?>[] paramTypes; // 方法中参数的类型; 也可以直接用String
+
+    // 是否是心跳包
+    private Boolean heartBeat;
 }

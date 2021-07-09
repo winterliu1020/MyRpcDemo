@@ -2,7 +2,7 @@ package me.liuwentao.rpc.core.transport.Socket.server;
 
 import me.liuwentao.rpc.common.Enumeration.RpcError;
 import me.liuwentao.rpc.common.Exception.RpcException;
-import me.liuwentao.rpc.common.util.ThreadPoolFactory;
+import me.liuwentao.rpc.common.factory.ThreadPoolFactory;
 import me.liuwentao.rpc.core.Provider.DefaultServiceProvider;
 import me.liuwentao.rpc.core.Provider.ServiceProvider;
 import me.liuwentao.rpc.core.Registry.NacosServiceRegistry;
@@ -38,20 +38,21 @@ public class SocketServer implements RpcServer {
     private CommonSerializer serializer;
 
     public SocketServer(String host, int port) {
+        this(host, port, CommonSerializer.DEFAULT_SERIALIZER);
+    }
+
+    public SocketServer(String host, int port, Integer serializerCode) {
         this.host = host;
         this.port = port;
         // ServiceProvider、serviceRegistry
         serviceProvider = new DefaultServiceProvider();
         serviceRegistry = new NacosServiceRegistry();
+        serializer = CommonSerializer.getByCode(serializerCode);
 
         // 用线程池工厂类创建一个线程池
         threadPoolExecutor = ThreadPoolFactory.createDefaultThreadPool(THREAD_NAME_PREFIX);
     }
 
-    @Override
-    public void setSerializer(CommonSerializer serializer) {
-        this.serializer = serializer;
-    }
 
     // 现在就没有register方法了，而是start(port) 这个rpcServer开启在哪个端口上
     @Override

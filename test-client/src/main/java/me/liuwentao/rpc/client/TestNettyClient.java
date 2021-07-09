@@ -2,6 +2,7 @@ package me.liuwentao.rpc.client;
 
 import me.liuwentao.rpc.api.HelloObject;
 import me.liuwentao.rpc.api.HelloService;
+import me.liuwentao.rpc.core.Serializer.CommonSerializer;
 import me.liuwentao.rpc.core.transport.Netty.client.NettyClient;
 import me.liuwentao.rpc.core.RpcClient;
 import me.liuwentao.rpc.core.RpcClientProxy;
@@ -12,8 +13,7 @@ import me.liuwentao.rpc.core.Serializer.KryoSerializer;
  */
 public class TestNettyClient {
     public static void main(String[] args) {
-        RpcClient nettyClient = new NettyClient();
-        nettyClient.setSerializer(new KryoSerializer());
+        RpcClient nettyClient = new NettyClient(CommonSerializer.KRYO_SERIALIZER);
         RpcClientProxy rpcClientProxy = new RpcClientProxy(nettyClient);
         // 拿到某一个接口的代理
         HelloService helloServiceProxy = rpcClientProxy.getProxy(HelloService.class); // 这里其实拿到一个代理类helloServiceProxy

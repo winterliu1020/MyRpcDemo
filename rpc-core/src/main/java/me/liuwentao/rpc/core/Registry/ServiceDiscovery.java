@@ -1,0 +1,1 @@
+package me.liuwentao.rpc.core.Registry;import java.net.InetSocketAddress;/** * Created by liuwentao on 2021/7/5 11:09 */public interface ServiceDiscovery {    // 根据服务名查找服务所在的地址    public InetSocketAddress lookupService(String serviceName);}

@@ -4,10 +4,12 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.handler.timeout.IdleState;
+import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.util.ReferenceCountUtil;
 import me.liuwentao.rpc.common.Entity.RpcRequest;
 import me.liuwentao.rpc.common.Entity.RpcResponse;
-import me.liuwentao.rpc.common.util.ThreadPoolFactory;
+import me.liuwentao.rpc.common.factory.ThreadPoolFactory;
 import me.liuwentao.rpc.core.Provider.DefaultServiceProvider;
 import me.liuwentao.rpc.core.Provider.ServiceProvider;
 import me.liuwentao.rpc.core.handler.RequestHandler;
@@ -44,11 +46,16 @@ public class NettyServerHandler extends SimpleChannelInboundHandler<RpcRequest> 
             try {
                 // 从rpcRequest对象中读取interfaceName
                 logger.info("服务器接收到请求：{}", rpcRequest);
+                if (rpcRequest.getHeartBeat()) {
+                    logger.info("服务器端接收到心跳包..."); // 服务器端不需要处理心跳包
+                    return;
+                }
                 Object result = requestHandler.handler(rpcRequest);
                 // 异步通信
                 ChannelFuture channelFuture = channelHandlerContext.writeAndFlush(RpcResponse.success(result,
                         rpcRequest.getRequestId()));
-                channelFuture.addListener(ChannelFutureListener.CLOSE);
+
+//                channelFuture.addListener(ChannelFutureListener.CLOSE); // 写完就关闭了channel。。。没有心跳
             } finally {
                 ReferenceCountUtil.release(rpcRequest);
             }
@@ -60,5 +67,18 @@ public class NettyServerHandler extends SimpleChannelInboundHandler<RpcRequest> 
         logger.error("处理过程调用时发生错误");
         cause.printStackTrace();
         ctx.close();
+    }
+
+    @Override
+    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+        if (evt instanceof IdleStateEvent) {
+            if (IdleState.READER_IDLE.equals(((IdleStateEvent) evt).state())) {
+                // 如果被触发了一个空闲事件，需要发一个心跳包
+                logger.info("长时间未收到客户端请求，断开连接...");
+                ctx.close();
+            }
+        } else {
+            super.userEventTriggered(ctx, evt);
+        }
     }
 }

@@ -1,0 +1,1 @@
+package me.liuwentao.rpc.core.loadBalance;import com.alibaba.nacos.api.naming.pojo.Instance;import java.util.List;/** * Created by liuwentao on 2021/7/5 17:14 */public interface LoadBalance {    Instance select(List<Instance> instanceList);}

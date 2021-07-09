@@ -15,7 +15,6 @@ public class TestSocketClient {
     public static void main(String[] args) {
 //         客户端用的是动态代理的方式; 客户端唯一的作用是：向目的ip, port发送rpcRequest
         RpcClient socketClient = new SocketClient(); // socketClient是向nacos那里获取接口的在服务器上的地址
-        socketClient.setSerializer(new KryoSerializer());
 
         RpcClientProxy rpcClientProxy = new RpcClientProxy(socketClient);
         // 客户端并没有HelloService这个接口对应的实现实例，所以不能直接调用实现实例的方法；所以客户端采用动态代理的方式

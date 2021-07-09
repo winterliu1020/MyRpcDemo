@@ -26,7 +26,6 @@ public class DefaultServiceProvider implements ServiceProvider {
     public synchronized <T> void addServiceProvide(T service) { // 这个service是具体的服务实现类，eg:HelloServiceImpl
         // 将service上的所有接口、service注册到注册表
         // 1. 如果已经在注册表，直接return
-
         String serviceName = service.getClass().getCanonicalName();
         if (registerService.contains(serviceName)) return;
         // 2. 否则的话就把service这个类上所有的接口、service注册到注册表map

@@ -13,7 +13,6 @@ import me.liuwentao.rpc.core.transport.Socket.server.SocketServer;
 public class TestSocketServer {
     public static void main(String[] args) {
         RpcServer socketServer = new SocketServer("127.0.0.1", 8086);
-        socketServer.setSerializer(new KryoSerializer());
         // socketServer发布一个服务
         HelloService helloService = new HelloServiceImpl();
         socketServer.publishService(helloService, HelloService.class); // 服务具体实现类、接口class

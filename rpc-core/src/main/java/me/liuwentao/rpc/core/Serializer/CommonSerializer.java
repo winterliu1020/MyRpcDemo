@@ -13,6 +13,11 @@ public interface CommonSerializer {
 
     int getCode(); // 获取某个具体序列化实现类的唯一标识
 
+    // 这里需要写出每种序列化方式对应的code
+    Integer KRYO_SERIALIZER = 0;
+    Integer JSON_SERIALIZER = 1;
+    Integer DEFAULT_SERIALIZER = KRYO_SERIALIZER;
+
     // 这里还是回到接口（其实是约定一种协议）的设计思想来：接口中的属性应该是不可变的，接口符合开闭原则，这里的getByCode()方法是static方法，接口中允许将相关的方法以static的形式内聚在接口中，类似于类中的静态方法；
     // 但是接口中的static方法和抽象类中static方法又有些不同，抽象类中可以有可变的属性、构造方法；
     // 通过标识code拿到某个序列化实现类
@@ -24,7 +29,6 @@ public interface CommonSerializer {
                 return new JsonSerializer();
             default:
                 return null;
-
         }
     }
 }

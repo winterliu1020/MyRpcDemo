@@ -12,6 +12,7 @@ import me.liuwentao.rpc.core.Serializer.CommonSerializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -31,7 +32,7 @@ public class CommonDecoder extends ReplayingDecoder {
         // 依次对魔数、packageType进行校验
         int magic_num = byteBuf.readInt();
         if (magic_num != MAGIC_NUMBER) {
-            logger.error("未知协议包");
+            logger.error("未知协议包:{}", magic_num);
             throw new RpcException(RpcError.PROTOCOL_NOT_FOUND);
         }
         int packageCode = byteBuf.readInt();

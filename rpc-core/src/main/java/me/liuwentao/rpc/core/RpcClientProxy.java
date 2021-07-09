@@ -1,6 +1,10 @@
 package me.liuwentao.rpc.core;
 
 import me.liuwentao.rpc.common.Entity.RpcRequest;
+import me.liuwentao.rpc.common.Entity.RpcResponse;
+import me.liuwentao.rpc.common.util.RpcMessageChecker;
+import me.liuwentao.rpc.core.transport.Netty.client.NettyClient;
+import me.liuwentao.rpc.core.transport.Socket.client.SocketClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -8,6 +12,7 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Created by liuwentao on 2021/6/10 16:07
@@ -40,8 +45,21 @@ public class RpcClientProxy implements InvocationHandler {
                 .methodName(method.getName())
                 .parameters(args)
                 .paramTypes(method.getParameterTypes())
+                .heartBeat(false)
                 .build();
         logger.info("构造的rpcRequest中interfaceName:{}", method.getDeclaringClass().getCanonicalName());
-        return rpcClient.sendRequest(rpcRequest);
+        // 在代理proxy类中，要区分NettyClient和SocketClient，因为这两个执行sendRequest的返回值是不一样的
+        RpcResponse<?> response = null;
+        if (rpcClient instanceof NettyClient) {
+            CompletableFuture<RpcResponse> completableFuture = (CompletableFuture<RpcResponse>)rpcClient.sendRequest(rpcRequest);
+            response = completableFuture.get();
+        }
+        if (rpcClient instanceof SocketClient) {
+            logger.info("发起一个socket RpcRequest请求");
+            response = (RpcResponse<?>) rpcClient.sendRequest(rpcRequest);
+        }
+        RpcMessageChecker.check(rpcRequest, response);
+        logger.info("反射调用执行结果    " + response.getData().toString());
+        return response.getData();
     }
 }

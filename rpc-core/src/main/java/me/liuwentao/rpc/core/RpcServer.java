@@ -13,7 +13,4 @@ public interface RpcServer {
     // v3.0中新增publishService方法，用于向nacos中发布一个服务
     // 接口中方法都是隐式public abstract的；属性都是隐式public static final的
     <T> void publishService(Object service, Class<T> serviceClass);
-
-    // 设定RpcServer端的序列化方式
-    void setSerializer(CommonSerializer commonSerializer);
 }

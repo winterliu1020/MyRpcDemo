@@ -10,18 +10,25 @@ import me.liuwentao.rpc.common.Entity.RpcRequest;
 import me.liuwentao.rpc.common.Entity.RpcResponse;
 import me.liuwentao.rpc.common.Enumeration.RpcError;
 import me.liuwentao.rpc.common.Exception.RpcException;
+import me.liuwentao.rpc.common.factory.SingletonFactory;
 import me.liuwentao.rpc.common.util.RpcMessageChecker;
+import me.liuwentao.rpc.core.Registry.NacosServiceDiscovery;
 import me.liuwentao.rpc.core.Registry.NacosServiceRegistry;
+import me.liuwentao.rpc.core.Registry.ServiceDiscovery;
 import me.liuwentao.rpc.core.Registry.ServiceRegistry;
 import me.liuwentao.rpc.core.RpcClient;
 import me.liuwentao.rpc.core.Serializer.CommonSerializer;
 import me.liuwentao.rpc.core.Serializer.KryoSerializer;
 import me.liuwentao.rpc.core.codec.CommonDecoder;
 import me.liuwentao.rpc.core.codec.CommonEncoder;
+import me.liuwentao.rpc.core.loadBalance.LoadBalance;
+import me.liuwentao.rpc.core.loadBalance.RandomLoadBalance;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -32,40 +39,37 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public class NettyClient implements RpcClient {
     private static final Logger logger = LoggerFactory.getLogger(NettyClient.class);
-    // 具体的client端去与IP，端口进行绑定
-//    private String host;
-//    private int port;
 
     // 用于启动client的bootstrap
     private static Bootstrap bootstrap;
 
-    // 注册中心对象
-    private final ServiceRegistry serviceRegistry;
-
     // 序列化方式
-    private CommonSerializer serializer;
+    private final CommonSerializer serializer;
+    // 未处理请求
+    private final UnprocessedRequest unprocessedRequest;
+    // 服务发现
+    private final ServiceDiscovery serviceDiscovery;
 
+    // 默认序列化方式
     public NettyClient() {
-        serviceRegistry = new NacosServiceRegistry();
+        this(DEFAULT_SERIALIZER, new RandomLoadBalance());
     }
 
-    // 完成客户端的配置
-    static {
-        bootstrap = new Bootstrap();
-        EventLoopGroup eventLoopGroup = new NioEventLoopGroup();
-        bootstrap.group(eventLoopGroup)
-                .channel(NioSocketChannel.class)
-                .option(ChannelOption.SO_KEEPALIVE, true)
-                .handler(new ChannelInitializer<SocketChannel>() {
-                    @Override
-                    protected void initChannel(SocketChannel socketChannel) throws Exception {
-                        ChannelPipeline pipeline = socketChannel.pipeline();
-                        // 加入handler的方法：根据业务顺序来加，比如先是编解码，你就把解码、编码混合加入，然后再是下一个业务；因为inbound是从前往后走的，outbound是从后往前走
-                        pipeline.addLast(new CommonDecoder()); // inbound；client中进来的数据包，是根据数据流中的serializerCode再去拿到对应的序列化类
-                        pipeline.addLast(new CommonEncoder(new KryoSerializer())); // 这里是对即将发出去的数据序列化，所以需要自己指定用哪种序列化类; 注意在服务器端需要和客户端选择的序列化类对应
-                        pipeline.addLast(new NettyClientHandler()); // inbound;  都是inbound，前面以及decoder了，所以这里直接拿到rpcResponse
-                    }
-                });
+    public NettyClient(LoadBalance loadBalance) {
+        this(DEFAULT_SERIALIZER, loadBalance);
+    }
+
+    public NettyClient(Integer serializer) {
+        this(serializer, new RandomLoadBalance());
+    }
+
+    // 客户端并没有loadBalance属性，loadBalance属性是存在于ServiceDiscovery中的，服务发现类对象去根据loadBalance策略从list中去select一个inetSocketAddress
+    // 客户端的构造方法中需要指定：1. 序列化方式
+
+    public NettyClient(int DEFAULT_SERIALIZER, LoadBalance loadBalance) {
+        this.serializer = CommonSerializer.getByCode(DEFAULT_SERIALIZER);
+        this.unprocessedRequest = SingletonFactory.newInstance(UnprocessedRequest.class); // 获取对应类的单例
+        this.serviceDiscovery = new NacosServiceDiscovery(loadBalance);
     }
 
     // v3.0之前都是来一个rpcRequest就通过bootstrap与对应的服务器端host, port构建一个channel，但是之前都是与一个host，port进行通信；
@@ -73,48 +77,48 @@ public class NettyClient implements RpcClient {
     // port的模式了；而且如果两次sendRequest都是发往同一个host, port，之前的话会重复构建channel，v3.0版本中新建一个ChannelProvider类来提供对应InetSAddress(host,
     // port)、serializer的channel
     @Override
-    public Object sendRequest(RpcRequest rpcRequest) {
+    public CompletableFuture<RpcResponse> sendRequest(RpcRequest rpcRequest) {
         if (serializer == null) {
             logger.error("未设置序列化器");
             throw new RpcException(RpcError.SERIALIZER_NOT_FOUND);
         }
-        AtomicReference<Object> result = new AtomicReference<>(null);
-        // v3.0改为从ChannelProvider中获取channel；每一个nettyClient中都包含了serviceRegistry，serializer这两个属性
-        InetSocketAddress inetSocketAddress = serviceRegistry.lookupService(rpcRequest.getInterfaceName()); // 接口名
-        Channel channel = ChannelProvider.get(inetSocketAddress, serializer); // 静态方法中调用静态成员，在多线程环境中会存在线程安全问题！所以我给get
-        // ()方法加上synchronized保证多线程不能同时调用get方法，从而保证多线程环境下通过get方法拿到里面static类型channel值的唯一性
+        // v3.0版本中使用了AtomicReference，保证result在多线程下的安全性
+//        AtomicReference<Object> result = new AtomicReference<>(null);
 
-        // client端连接到服务器端
+        // v3.1版本中使用unprocessedRequests这个类来让每一个request对应一个CompletableFuture<RpcResponse>，通过这种方式来保证request对应result的线程安全性
+        CompletableFuture<RpcResponse> completableFuture = new CompletableFuture<>();
+
+
         try {
+            // client端连接到服务器端
+            // v3.0改为从ChannelProvider中获取channel；每一个nettyClient中都包含了serviceRegistry，serializer这两个属性；v3
+            // .1对远程注册中心的接口进行抽象，服务发现、服务注册分别放到两个接口中，但是这两个接口中的实现类都用NacosUtil中的静态方法以及同一个NamingService
+            InetSocketAddress inetSocketAddress = serviceDiscovery.lookupService(rpcRequest.getInterfaceName()); // 接口名
+            Channel channel = ChannelProvider.get(inetSocketAddress, serializer); // 静态方法中调用静态成员，在多线程环境中会存在线程安全问题！所以我给get
+            // ()方法加上synchronized保证多线程不能同时调用get方法，从而保证多线程环境下通过get方法拿到里面static类型channel值的唯一性
+
+            // 来了一个rpcRequest，先put到unprocessedRequests对象中
+            unprocessedRequest.put(rpcRequest.getRequestId(), completableFuture);
+
             logger.info("客户端连接到服务器：{}:{}", inetSocketAddress.getHostName(), inetSocketAddress.getPort());
             if (channel != null && channel.isActive()) {
-                channel.writeAndFlush(rpcRequest).addListener(future -> { // channel.writeAndFlush(rpcRequest)会被通道中的OutBound类型handler捕捉到并处理，这里就会被CommonEncoder这个handler捕获到
-                   if (future.isSuccess()) {
-                       logger.info("客户端已经成功发送请求：{}", rpcRequest);
-                   } else {
-                       logger.error("客户端发送请求失败：", future.cause());
-                   }
+                channel.writeAndFlush(rpcRequest).addListener((ChannelFutureListener)future -> { // channel.writeAndFlush(rpcRequest)会被通道中的OutBound类型handler捕捉到并处理，这里就会被CommonEncoder这个handler捕获到
+                    if (future.isSuccess()) {
+                        logger.info("客户端已经成功发送请求：{}", rpcRequest);
+//                        future.channel().close();
+                    } else {
+                        future.channel().close();
+                        logger.error("客户端发送请求失败：", future.cause());
+                        completableFuture.completeExceptionally(future.cause());
+                    }
                 });
-                channel.closeFuture().sync();
-                // 如果这样写：AttributeKey<RpcResponse>会警告，因为RpcResponse是一个泛型类，「泛型不要使用原生类型」会导致丢失类型安全性；需要在<>中加上类型
-                AttributeKey<RpcResponse<?>> attributeKey =
-                        AttributeKey.valueOf("rpcResponse" + rpcRequest.getRequestId());
-                // 获取nettyClient端的handler上附加的RpcResponse；
-                RpcResponse<?> rpcResponse = channel.attr(attributeKey).get();
-
-                RpcMessageChecker.check(rpcRequest, rpcResponse);
-                result.set(rpcResponse.getData());
-            } else {
-                System.exit(0);
             }
         } catch (InterruptedException e) {
-            logger.error("发送信息时发生错误：", e);
+            unprocessedRequest.remove(rpcRequest.getRequestId());
+            logger.error(e.getMessage(), e);
+            Thread.currentThread().interrupt();
         }
-        return result.get();
-    }
 
-    @Override
-    public void setSerializer(CommonSerializer serializer) {
-        this.serializer = serializer;
+        return completableFuture;
     }
 }
