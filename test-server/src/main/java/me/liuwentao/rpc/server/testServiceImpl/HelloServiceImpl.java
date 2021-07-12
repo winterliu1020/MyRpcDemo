@@ -1,7 +1,8 @@
-package me.liuwentao.rpc.server;
+package me.liuwentao.rpc.server.testServiceImpl;
 
 import me.liuwentao.rpc.api.HelloObject;
 import me.liuwentao.rpc.api.HelloService;
+import me.liuwentao.rpc.core.annotation.Service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -10,6 +11,8 @@ import org.slf4j.LoggerFactory;
  *
  * 测试用提供端，也就是服务器端；用于去实现通用接口
  */
+
+@Service
 public class HelloServiceImpl implements HelloService {
     // 把当前类作为参数，输出日志的时候会打印是当前类的日志信息
     private static final Logger logger = LoggerFactory.getLogger(HelloServiceImpl.class);

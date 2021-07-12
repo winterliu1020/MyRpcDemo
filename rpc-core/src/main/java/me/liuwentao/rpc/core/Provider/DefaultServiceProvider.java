@@ -23,21 +23,14 @@ public class DefaultServiceProvider implements ServiceProvider {
     private static Logger logger = LoggerFactory.getLogger(ServiceProvider.class);
 
     @Override
-    public synchronized <T> void addServiceProvide(T service) { // 这个service是具体的服务实现类，eg:HelloServiceImpl
-        // 将service上的所有接口、service注册到注册表
-        // 1. 如果已经在注册表，直接return
-        String serviceName = service.getClass().getCanonicalName();
-        if (registerService.contains(serviceName)) return;
+    public synchronized <T> void addServiceProvide(T service, String interfaceName) { // 这个service是具体的服务实现类，eg:HelloServiceImpl；以及接口class
+        // 1. 如果服务已经在注册表，直接return
+        if (registerService.contains(interfaceName)) return;
         // 2. 否则的话就把service这个类上所有的接口、service注册到注册表map
-        registerService.add(serviceName);
-        Class<?>[] interfaces = service.getClass().getInterfaces();
-        if (interfaces.length == 0) {
-            throw(new RpcException(RpcError.SERVICE_NOT_IMPLEMENT_ANY_INTERFACE));
-        }
-        for (Class<?> clazz : interfaces) {
-            serviceMap.put(clazz.getCanonicalName(), service);
-        }
-        logger.info("向接口{}注册服务{}", interfaces, serviceName);
+        registerService.add(interfaceName);
+
+        serviceMap.put(interfaceName, service);
+        logger.info("向接口{}注册服务{}", interfaceName, service);
     }
 
     // 通过interfaceName获取注册表中的service实例；因为在serviceMap中是：interfaceName对应一个具体的实现对象service；

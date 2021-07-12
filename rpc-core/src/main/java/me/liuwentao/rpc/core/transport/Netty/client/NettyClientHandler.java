@@ -1,6 +1,7 @@
 package me.liuwentao.rpc.core.transport.Netty.client;
 
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.timeout.IdleState;
@@ -57,7 +58,7 @@ public class NettyClientHandler extends SimpleChannelInboundHandler<RpcResponse<
                 RpcRequest rpcRequest = new RpcRequest();
                 rpcRequest.setHeartBeat(true);
                 Channel channel = ChannelProvider.get((InetSocketAddress) ctx.channel().remoteAddress(), CommonSerializer.getByCode(CommonSerializer.DEFAULT_SERIALIZER));
-                channel.writeAndFlush(rpcRequest);
+                channel.writeAndFlush(rpcRequest).addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
             }
         } else {
             super.userEventTriggered(ctx, evt);

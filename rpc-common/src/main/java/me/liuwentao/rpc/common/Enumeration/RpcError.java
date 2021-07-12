@@ -19,6 +19,7 @@ public enum RpcError {
     FAILED_TO_REGISTER_SERVICE("注册服务失败"),
     CLIENT_CONNECT_SERVER_FAILURE("client连接server端失败"),
     SERVICE_INVOCATION_FAILURE("服务调用失败"),
-    RESPONSE_NOT_MATCH("响应结果不匹配");
+    RESPONSE_NOT_MATCH("响应结果不匹配"),
+    SERVICE_SCAN_PACKAGE_NOT_FOUND("启动类缺少@ServiceScan注解");
     private final String message;
 }

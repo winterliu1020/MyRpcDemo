@@ -7,7 +7,7 @@ package me.liuwentao.rpc.core.Provider;
  */
 public interface ServiceProvider {
 
-    <T> void addServiceProvide(T service);
+    <T> void addServiceProvide(T service, String interfaceName); // param1: 具体的服务实现类 param2: 你要给哪个接口进行注册
 
-    Object getServiceProvider(String serviceName);
+    Object getServiceProvider(String interfaceName);
 }
