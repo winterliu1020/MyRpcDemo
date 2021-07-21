@@ -85,3 +85,10 @@ private static final Set<String> registerService = ConcurrentHashMap.newKeySet()
 4. 之前是将serviceRegistry()和lookupService()放到同一个接口中，这里抽象出ServiceDiscovery接口，将服务在远程注册中心的注册与发现放到两个接口中，并且把管理远程注册中心的各个方法放到NacosUtil类中，这样「注册」与「发现」两个接口的实现类都可以直接使用NacosUtil来操作远程注册中心。相应的，服务批量注销方法也在NacosUtil类中。
 5. 优化序列化器创建方式，之前客户端和服务器端都用setSerializer()来指定序列化方式，这里通过优化客户端和服务器端的构造方法，如果不指定序列化方式，框架就帮你自动选择默认的序列化方式，你也可以在new客户端或者服务器端的时候，传入序列化器对应的编码告诉框架需要帮你生成哪一种序列化器。
 6. **在客户端**，通过CompletableFuture<RpcResponse>来接收Netty客户端的响应结果，新建了一个UnprocessedRequest类，然后这个类中有一个concurrentHashMap<String, CompletableFuture<RpcResponse>>，其中key就是requestId，value就是这个request对应的响应结果，而这个UnprocessedRequest类是一个单例（**这里我觉得是一个Bug**），通过这种方式来管理每一个RpcRequest和与之对应的CompletableFuture<RpcResponse>。具体管理流程：1.当客户端发起一个request时就将该<key, value>放到map中：unprocessedRequests.put(rpcRequest.getRequestId(), resultFuture); 2.如果客户端sendRequest中发生异常，那么需要将该request移出map:unprocessedRequests.remove(rpcRequest.getRequestId()); 3.如果客户端成功接收到服务器端的响应，需要执行unprocessedRequests.complete(rpcResponse);来告诉客户端该request的响应完成，所以netty对应的sendRequest的返回值是completableFuture<RpcResponse>对象，该completableFuture对象已经执行了complete()，这样在RpcClientProxy中就可以通过completableFuture.get()拿到对应的response，如果没有执行complete，执行get的时候会阻塞。
+7. 对channel进行复用，在channelProvider中用一个HashMap<String, Channel>存储所有客户端连接产生的channel，key是host+port+serializerCode组成的一个字符串，当通过key去获取对应的channle时，如果该channel不可用，则需要重新创建并放到map中。
+
+### 版本v3.2
+版本介绍：增加服务器端通过注解自动注册服务功能
+之前版本我们在服务器端必须手动new一个服务实现类，然后手动添加到本地注册表和远程注册中心，在这个版本中通过注解来简化服务注册。通过@ServiceScan放在所有服务实现类的基类上，它会扫描这个基类所在的包下面所有加了@Service注解的class文件，然后对这些class进行newInstance创建实例，并且对应这些class上实现的接口，一起注册到本地注册表和远程注册中心。
+
+同时，由于socketClient和nettyClient中都需要通过注解自动注册服务，所以这个版本中添加了一个AbstractRpcServer抽象类，这个抽象类实现了RpcServer接口，然后在这个抽象类中实现了scanService()方法通过注解自动注册服务，具体的客户端实现类再去继承这个抽象类即可用scanService()方法来注册服务。
