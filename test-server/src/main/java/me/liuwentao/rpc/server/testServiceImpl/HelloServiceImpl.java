@@ -12,7 +12,7 @@ import org.slf4j.LoggerFactory;
  * 测试用提供端，也就是服务器端；用于去实现通用接口
  */
 
-@Service
+@Service(group = "group1", version = "version1")
 public class HelloServiceImpl implements HelloService {
     // 把当前类作为参数，输出日志的时候会打印是当前类的日志信息
     private static final Logger logger = LoggerFactory.getLogger(HelloServiceImpl.class);

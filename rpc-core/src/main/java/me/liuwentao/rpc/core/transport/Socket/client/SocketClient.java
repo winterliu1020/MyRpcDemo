@@ -57,7 +57,7 @@ public class SocketClient implements RpcClient {
 
         // v3.0中改为从nacos那里拿到对应服务的host, port
         // v3.1抽象出serviceDiscovery
-        InetSocketAddress inetSocketAddress = serviceDiscovery.lookupService(rpcRequest.getInterfaceName());
+        InetSocketAddress inetSocketAddress = serviceDiscovery.lookupService(rpcRequest.getInterfaceName() + rpcRequest.getGroup() + rpcRequest.getVersion());
         logger.info("获取到一个可用的服务器端地址{}:{}", inetSocketAddress.getHostName(), inetSocketAddress.getPort());
         Socket socket = new Socket();
         try {

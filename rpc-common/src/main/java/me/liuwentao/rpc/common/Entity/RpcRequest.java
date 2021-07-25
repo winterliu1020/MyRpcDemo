@@ -12,7 +12,9 @@ import java.io.Serializable;
 @Data
 @Builder
 @AllArgsConstructor
-public class RpcRequest implements Serializable { // 用jdk原生的序列化就需要实现Serializable接口；用Jackson来序列化就可以不用实现接口
+public class RpcRequest implements Serializable {
+    private static final long serialVersionUID = 7358081586427647868L; // 用jdk原生的序列化就需要实现Serializable接口；用Jackson来序列化就可以不用实现接口
+
     public RpcRequest(){}
     private String requestId; // 请求号
 
@@ -21,6 +23,10 @@ public class RpcRequest implements Serializable { // 用jdk原生的序列化就
     private String methodName;
     private Object[] parameters; // 方法中传的对象实体
     private Class<?>[] paramTypes; // 方法中参数的类型; 也可以直接用String
+
+    // 由于同一个接口可能有多种实现类，所以对服务进行分组，发布服务的时候增加group、version参数；version用于兼容版本
+    private String group;
+    private String version;
 
     // 是否是心跳包
     private Boolean heartBeat;

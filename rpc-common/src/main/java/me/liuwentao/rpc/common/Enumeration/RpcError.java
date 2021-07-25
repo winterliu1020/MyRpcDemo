@@ -20,6 +20,7 @@ public enum RpcError {
     CLIENT_CONNECT_SERVER_FAILURE("client连接server端失败"),
     SERVICE_INVOCATION_FAILURE("服务调用失败"),
     RESPONSE_NOT_MATCH("响应结果不匹配"),
-    SERVICE_SCAN_PACKAGE_NOT_FOUND("启动类缺少@ServiceScan注解");
+    SERVICE_SCAN_PACKAGE_NOT_FOUND("启动类缺少@ServiceScan注解"),
+    INTERFACE_NO_IMPLEMENTED_SERVICE("调用的接口没有相应的服务实现");
     private final String message;
 }

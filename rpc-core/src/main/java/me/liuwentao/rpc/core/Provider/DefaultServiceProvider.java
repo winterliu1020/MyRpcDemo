@@ -2,6 +2,7 @@ package me.liuwentao.rpc.core.Provider;
 
 import me.liuwentao.rpc.common.Enumeration.RpcError;
 import me.liuwentao.rpc.common.Exception.RpcException;
+import me.liuwentao.rpc.core.config.RpcServiceConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,14 +24,14 @@ public class DefaultServiceProvider implements ServiceProvider {
     private static Logger logger = LoggerFactory.getLogger(ServiceProvider.class);
 
     @Override
-    public synchronized <T> void addServiceProvide(T service, String interfaceName) { // 这个service是具体的服务实现类，eg:HelloServiceImpl；以及接口class
+    public synchronized void addServiceProvide(RpcServiceConfig rpcServiceConfig, String interfaceGroupVersionName) { // 这个service是具体的服务实现类的封装类RpcServiceConfig
         // 1. 如果服务已经在注册表，直接return
-        if (registerService.contains(interfaceName)) return;
+        if (registerService.contains(interfaceGroupVersionName)) return;
         // 2. 否则的话就把service这个类上所有的接口、service注册到注册表map
-        registerService.add(interfaceName);
+        registerService.add(interfaceGroupVersionName);
 
-        serviceMap.put(interfaceName, service);
-        logger.info("向接口{}注册服务{}", interfaceName, service);
+        serviceMap.put(interfaceGroupVersionName, rpcServiceConfig.getService());
+        logger.info("向接口{}注册服务{}", interfaceGroupVersionName, rpcServiceConfig.getService());
     }
 
     // 通过interfaceName获取注册表中的service实例；因为在serviceMap中是：interfaceName对应一个具体的实现对象service；

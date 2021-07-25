@@ -2,6 +2,7 @@ package me.liuwentao.rpc.client;
 
 import me.liuwentao.rpc.api.HelloObject;
 import me.liuwentao.rpc.api.HelloService;
+import me.liuwentao.rpc.core.config.RpcServiceConfig;
 import me.liuwentao.rpc.core.transport.RpcClient;
 import me.liuwentao.rpc.core.transport.RpcClientProxy;
 import me.liuwentao.rpc.core.transport.Socket.client.SocketClient;
@@ -15,7 +16,7 @@ public class TestSocketClient {
 //         客户端用的是动态代理的方式; 客户端唯一的作用是：向目的ip, port发送rpcRequest
         RpcClient socketClient = new SocketClient(); // socketClient是向nacos那里获取接口的在服务器上的地址
 
-        RpcClientProxy rpcClientProxy = new RpcClientProxy(socketClient);
+        RpcClientProxy rpcClientProxy = new RpcClientProxy(socketClient, RpcServiceConfig.builder().group("group1").version("version1").build());
         // 客户端并没有HelloService这个接口对应的实现实例，所以不能直接调用实现实例的方法；所以客户端采用动态代理的方式
         HelloService helloService = rpcClientProxy.getProxy(HelloService.class); // 拿到HelloService的代理类实例
         Object result = helloService.sayHello(new HelloObject(1, "hello world")); // 通过代理类去调用接口中某一个方法，都会被拦截到代理类的invoke()方法中；invoke()方法的返回值就是这个sayHello()的返回值

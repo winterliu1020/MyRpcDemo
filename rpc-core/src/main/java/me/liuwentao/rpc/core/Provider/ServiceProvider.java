@@ -1,5 +1,7 @@
 package me.liuwentao.rpc.core.Provider;
 
+import me.liuwentao.rpc.core.config.RpcServiceConfig;
+
 /**
  * Created by liuwentao on 2021/6/13 23:44
  *
@@ -7,7 +9,7 @@ package me.liuwentao.rpc.core.Provider;
  */
 public interface ServiceProvider {
 
-    <T> void addServiceProvide(T service, String interfaceName); // param1: 具体的服务实现类 param2: 你要给哪个接口进行注册
+    void addServiceProvide(RpcServiceConfig rpcServiceConfig, String interfaceGroupVersionName); // param1: 具体的服务实现类 param2: 你要给哪个接口进行注册
 
-    Object getServiceProvider(String interfaceName);
+    Object getServiceProvider(String interfaceGroupVersionName);
 }

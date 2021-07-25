@@ -81,7 +81,7 @@ public class NettyClient implements RpcClient {
             // client端连接到服务器端
             // v3.0改为从ChannelProvider中获取channel；每一个nettyClient中都包含了serviceRegistry，serializer这两个属性；v3
             // .1对远程注册中心的接口进行抽象，服务发现、服务注册分别放到两个接口中，但是这两个接口中的实现类都用NacosUtil中的静态方法以及同一个NamingService
-            InetSocketAddress inetSocketAddress = serviceDiscovery.lookupService(rpcRequest.getInterfaceName()); // 接口名
+            InetSocketAddress inetSocketAddress = serviceDiscovery.lookupService(rpcRequest.getInterfaceName()+rpcRequest.getGroup()+rpcRequest.getVersion()); // 接口名
             Channel channel = ChannelProvider.get(inetSocketAddress, serializer); // 静态方法中调用静态成员，在多线程环境中会存在线程安全问题！所以我给get
             // ()方法加上synchronized保证多线程不能同时调用get方法，从而保证多线程环境下通过get方法拿到里面static类型channel值的唯一性
 

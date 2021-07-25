@@ -3,6 +3,7 @@ package me.liuwentao.rpc.core.transport;
 import me.liuwentao.rpc.common.Entity.RpcRequest;
 import me.liuwentao.rpc.common.Entity.RpcResponse;
 import me.liuwentao.rpc.common.util.RpcMessageChecker;
+import me.liuwentao.rpc.core.config.RpcServiceConfig;
 import me.liuwentao.rpc.core.transport.Netty.client.NettyClient;
 import me.liuwentao.rpc.core.transport.Socket.client.SocketClient;
 import org.slf4j.Logger;
@@ -23,10 +24,18 @@ import java.util.concurrent.CompletableFuture;
 public class RpcClientProxy implements InvocationHandler {
     private static final Logger logger = LoggerFactory.getLogger(RpcClientProxy.class);
     private RpcClient rpcClient;
+    private RpcServiceConfig rpcServiceConfig;
 
     // 版本2.0中将RpcClientProxy类进行抽象，它可以为不同的client实现类进行代理；所以构造方法中你需要传一个client对象，从此由client去与host, port进行绑定；
+    // v3.3中：在RpcClientProxy构造函数中多增加一个RpcServerConfig(group, version, targetService)，用来指定具体调用哪个版本、哪个分组的服务，再用代理类去执行
+    public RpcClientProxy(RpcClient rpcClient, RpcServiceConfig rpcServiceConfig) {
+        this.rpcClient = rpcClient;
+        this.rpcServiceConfig = rpcServiceConfig;
+    }
+
     public RpcClientProxy(RpcClient rpcClient) {
         this.rpcClient = rpcClient;
+        rpcServiceConfig = RpcServiceConfig.builder().group("defaultGroup").version("defaultVersion").build();
     }
 
     @SuppressWarnings("unchecked")
@@ -46,6 +55,8 @@ public class RpcClientProxy implements InvocationHandler {
                 .parameters(args)
                 .paramTypes(method.getParameterTypes())
                 .heartBeat(false)
+                .group(rpcServiceConfig.getGroup())
+                .version(rpcServiceConfig.getVersion())
                 .build();
         logger.info("构造的rpcRequest中interfaceName:{}", method.getDeclaringClass().getCanonicalName());
         // 在代理proxy类中，要区分NettyClient和SocketClient，因为这两个执行sendRequest的返回值是不一样的

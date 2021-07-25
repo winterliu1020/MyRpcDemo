@@ -26,8 +26,8 @@ public class RequestHandler {
 
     public Object handler(RpcRequest rpcRequest) {
         Object result = null;
-        String interfaceName = rpcRequest.getInterfaceName();
-        Object service = serviceProvider.getServiceProvider(interfaceName); // 获取到具体的服务实现类
+        String interfaceGroupVersionName = rpcRequest.getInterfaceName() + rpcRequest.getGroup() + rpcRequest.getVersion();
+        Object service = serviceProvider.getServiceProvider(interfaceGroupVersionName); // 获取到具体的服务实现类
         logger.info("处理该请求的service：{}", service.getClass().getName());
 
         result = invokeTargetMethod(rpcRequest, service);
