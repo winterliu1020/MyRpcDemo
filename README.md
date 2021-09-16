@@ -92,3 +92,16 @@ private static final Set<String> registerService = ConcurrentHashMap.newKeySet()
 之前版本我们在服务器端必须手动new一个服务实现类，然后手动添加到本地注册表和远程注册中心，在这个版本中通过注解来简化服务注册。通过@ServiceScan放在所有服务实现类的基类上，它会扫描这个基类所在的包下面所有加了@Service注解的class文件，然后对这些class进行newInstance创建实例，并且对应这些class上实现的接口，一起注册到本地注册表和远程注册中心。
 
 同时，由于socketClient和nettyClient中都需要通过注解自动注册服务，所以这个版本中添加了一个AbstractRpcServer抽象类，这个抽象类实现了RpcServer接口，然后在这个抽象类中实现了scanService()方法通过注解自动注册服务，具体的客户端实现类再去继承这个抽象类即可用scanService()方法来注册服务。
+
+### 版本v3.3
+版本介绍：将服务新增group、version属性，将服务更加细化
+由于同一个接口可能有多种实现类，所以对服务进行分组，发布服务的时候增加一个group参数。
+  
+  
+  
+  
+  
+  
+  
+  
+  
